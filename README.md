@@ -15,6 +15,7 @@ A user-friendly CLI tool for monitoring and managing systemd services on Linux s
   - [Check Services](#2-check-specific-services)
   - [Monitor Services](#3-monitor-continuously)
   - [View Logs](#4-view-service-logs)
+  - [Write Logs](#5-write-logs-to-journal)
 - [Command Reference](#-command-reference)
 - [Examples](#-examples)
 - [Configuration](#-configuration)
@@ -32,6 +33,7 @@ A user-friendly CLI tool for monitoring and managing systemd services on Linux s
 - 🔍 **Check Service Status** - Get detailed information about specific services
 - 📡 **Real-time Monitoring** - Continuously monitor services with configurable intervals
 - 📝 **Log Viewing** - Read and follow systemd journal logs with filtering
+- ✍️ **Log Writing** - Write custom messages directly to systemd journal
 - 🎨 **Colorized Output** - Beautiful, color-coded terminal output
 - 📈 **Multiple Output Formats** - Table view or JSON export
 
@@ -200,6 +202,22 @@ sudo ./bin/monitor logs nginx --since "1 hour ago"
 
 # Search in logs
 sudo ./bin/monitor logs nginx --grep "error"
+```
+
+### 5. Write Logs to Journal
+
+```bash
+# Write a simple message
+./bin/monitor write-log --message "Application started"
+
+# Write with priority level
+./bin/monitor write-log --message "Critical error" --priority crit
+
+# Write with custom identifier
+./bin/monitor write-log --message "Deployment complete" --identifier my-app
+
+# View your logs
+journalctl -t systemd-monitor -n 20
 ```
 
 ---
@@ -395,6 +413,117 @@ sudo ./bin/monitor logs nginx --follow --lines 20
 
 ---
 
+### 5. Write Logs to Journal
+
+Write custom messages directly to the systemd journal for centralized logging.
+
+**Syntax:**
+```bash
+./bin/monitor write-log --message <text> [options]
+```
+
+**Options:**
+- `--message <text>` - Message to write (required)
+- `--priority <level>` - Priority level: `info`, `warning`, `err`, `crit`, `debug` (default: `info`)
+- `--identifier <name>` - Application identifier tag (default: `systemd-monitor`)
+
+**Priority Levels:**
+
+| Level | Description | Use Case |
+|-------|-------------|----------|
+| `emerg` | Emergency | System is unusable |
+| `alert` | Alert | Action must be taken immediately |
+| `crit` | Critical | Critical conditions |
+| `err` | Error | Error conditions |
+| `warning` | Warning | Warning conditions |
+| `notice` | Notice | Normal but significant |
+| `info` | Information | Informational messages (default) |
+| `debug` | Debug | Debug-level messages |
+
+**Examples:**
+
+```bash
+# Basic info message
+./bin/monitor write-log --message "Service started successfully"
+
+# Error message
+./bin/monitor write-log --message "Database connection failed" --priority err
+
+# Critical alert
+./bin/monitor write-log --message "Disk space critically low" --priority crit
+
+# Custom identifier
+./bin/monitor write-log --message "User login" --identifier my-web-app
+
+# Warning message
+./bin/monitor write-log --message "High memory usage: 85%" --priority warning
+```
+
+**View Your Logs:**
+
+```bash
+# View logs by identifier
+journalctl -t systemd-monitor -n 20
+
+# View custom identifier
+journalctl -t my-app -n 50
+
+# Follow logs in real-time
+journalctl -t systemd-monitor -f
+
+# View by priority
+journalctl -t systemd-monitor -p err
+
+# View from specific time
+journalctl -t systemd-monitor --since "1 hour ago"
+```
+
+**Integration Example (Shell Script):**
+
+```bash
+#!/bin/bash
+# backup.sh - Backup script with logging
+
+APP_NAME="backup-service"
+
+# Log start
+./bin/monitor write-log \
+  --message "Backup started" \
+  --priority info \
+  --identifier $APP_NAME
+
+# Perform backup
+if rsync -av /data /backup; then
+    ./bin/monitor write-log \
+      --message "Backup completed successfully" \
+      --priority info \
+      --identifier $APP_NAME
+else
+    ./bin/monitor write-log \
+      --message "Backup failed with exit code $?" \
+      --priority err \
+      --identifier $APP_NAME
+    exit 1
+fi
+```
+
+**Use Cases:**
+- Application logging from scripts
+- Custom monitoring alerts
+- Integration with external systems
+- Deployment tracking
+- Security event logging
+- Resource monitoring
+- Automated task logging
+
+**Technical Details:**
+- Uses `systemd-cat` to write to journal
+- Messages stored in systemd journal (`/var/log/journal/`)
+- Automatically indexed by identifier and priority
+- Logs persist across reboots (if journal persistence enabled)
+
+---
+
 ## 📚 Command Reference
 
 ### Complete Command List
@@ -428,6 +557,12 @@ sudo ./bin/monitor logs nginx --follow --lines 20
 ./bin/monitor logs nginx --grep "error"               # Text search
 ./bin/monitor logs nginx --follow --lines 20          # Follow with context
 ./bin/monitor logs nginx --sudo                       # Use sudo
+
+# WRITE-LOG COMMANDS
+./bin/monitor write-log --message "Service started"  # Write info message
+./bin/monitor write-log --message "Error" --priority err  # Write error
+./bin/monitor write-log --message "Alert" --priority crit # Write critical
+./bin/monitor write-log --message "Event" --identifier my-app # Custom identifier
 ```
 
 ### Global Flags
@@ -550,6 +685,43 @@ for service in "${SERVICES[@]}"; do
         ./bin/monitor check $service
     fi
 done
+```
+
+### Example 6: Script Logging to Journal
+
+```bash
+#!/bin/bash
+# monitor-disk.sh - Disk monitoring with journal logging
+
+APP_NAME="disk-monitor"
+THRESHOLD=80
+
+usage=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+
+# Log current usage
+./bin/monitor write-log \
+  --message "Disk usage check: ${usage}% used" \
+  --priority info \
+  --identifier $APP_NAME
+
+if [ $usage -gt $THRESHOLD ]; then
+    # Critical alert
+    ./bin/monitor write-log \
+      --message "Disk usage critical: ${usage}% used" \
+      --priority crit \
+      --identifier $APP_NAME
+    
+    # Send email alert
+    echo "Disk usage: ${usage}%" | mail -s "CRITICAL: Disk Space" admin@example.com
+else
+    # Normal operation
+    ./bin/monitor write-log \
+      --message "Disk usage normal: ${usage}% used" \
+      --priority info \
+      --identifier $APP_NAME
+fi
+
+# View logs: journalctl -t disk-monitor -n 20
 ```
 
 ---
@@ -751,6 +923,7 @@ systemd-monitoring/
 │   │   └── json.go                 # JSON formatter
 │   └── logger/                      # File logging
 │       └── file_logger.go          # File logger
+│       └── journal_logger.go       # Journal logger
 ├── bin/                             # Compiled binaries
 ```
 
@@ -852,6 +1025,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 | Check Services | ✅ Complete |
 | Monitor Services | ✅ Complete |
 | View Logs | ✅ Complete |
+| Write Logs | ✅ Complete |
 | JSON Export | ✅ Complete |
 | Real-time Following | ✅ Complete |
 | Filtering | ✅ Complete |

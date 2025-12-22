@@ -18,6 +18,9 @@ sudo ./bin/monitor logs nginx
 
 # Monitor continuously
 sudo ./bin/monitor monitor --services nginx --interval 30s
+
+# Write logs to journal
+./bin/monitor write-log --message "Application started"
 ```
 
 ---
@@ -202,6 +205,84 @@ sudo ./bin/monitor logs nginx --lines 100 --since "1 hour ago" --grep "error" --
 
 ---
 
+## 📝 WRITE-LOG Command
+
+### Basic Usage
+
+```bash
+# Write info message (default)
+./bin/monitor write-log --message "Service started"
+
+# Write with priority
+./bin/monitor write-log --message "Error occurred" --priority err
+
+# Write with custom identifier
+./bin/monitor write-log --message "Deployment complete" --identifier my-app
+```
+
+### Priority Levels
+
+```bash
+# Info (default)
+./bin/monitor write-log --message "Normal operation"
+
+# Warning
+./bin/monitor write-log --message "High memory" --priority warning
+
+# Error
+./bin/monitor write-log --message "Connection failed" --priority err
+
+# Critical
+./bin/monitor write-log --message "System critical" --priority crit
+
+# Debug
+./bin/monitor write-log --message "Debug info" --priority debug
+```
+
+### View Written Logs
+
+```bash
+# View by identifier
+journalctl -t systemd-monitor -n 20
+
+# View custom identifier
+journalctl -t my-app -n 50
+
+# Follow logs
+journalctl -t systemd-monitor -f
+
+# Filter by priority
+journalctl -t systemd-monitor -p err
+```
+
+### Script Integration
+
+```bash
+#!/bin/bash
+# Example: Backup script with logging
+
+APP="backup-service"
+
+./bin/monitor write-log \
+  --message "Backup started" \
+  --priority info \
+  --identifier $APP
+
+if /usr/bin/backup.sh; then
+    ./bin/monitor write-log \
+      --message "Backup completed" \
+      --priority info \
+      --identifier $APP
+else
+    ./bin/monitor write-log \
+      --message "Backup failed" \
+      --priority err \
+      --identifier $APP
+fi
+```
+
+---
+
 ## 🎨 Output Colors & Icons
 
 ### Service Status
@@ -236,11 +317,13 @@ sudo ./bin/monitor logs nginx --lines 100 --since "1 hour ago" --grep "error" --
 --follow            # Follow logs in real-time (logs command)
 --since <time>      # Time filter (logs command)
 --until <time>      # Time until (logs command)
---priority <level>  # Priority filter (logs command)
+--priority <level>  # Priority filter (logs/write-log command)
 --grep <pattern>    # Search pattern (logs command)
 --interval <dur>    # Check interval (monitor command)
 --services <list>   # Service list (monitor command)
 --log-file <path>   # Log file path (monitor command)
+--message <text>    # Message to write (write-log command)
+--identifier <name> # Application identifier (write-log command)
 ```
 
 ---
@@ -317,6 +400,15 @@ sudo ./bin/monitor logs nginx --follow --priority err
 sudo ./bin/monitor list --output json > inventory-$(date +%Y%m%d).json
 ```
 
+### Write Custom Logs
+```bash
+# Log deployment event
+./bin/monitor write-log --message "Deployment v1.2.3 started" --priority info --identifier deployment
+
+# Log monitoring alert
+./bin/monitor write-log --message "CPU usage exceeded 90%" --priority warning --identifier monitoring
+```
+
 ---
 
 ## 🐛 Quick Troubleshooting
@@ -360,6 +452,7 @@ alias sysmon='sudo /path/to/bin/monitor'
 alias syslist='sudo /path/to/bin/monitor list'
 alias syscheck='sudo /path/to/bin/monitor check'
 alias syslog='sudo /path/to/bin/monitor logs'
+alias syswrite='/path/to/bin/monitor write-log'
 
 # Quick commands
 alias syserr='sudo /path/to/bin/monitor list --status failed'
@@ -372,6 +465,7 @@ Usage:
 syslist
 syscheck nginx
 syslog nginx --follow
+syswrite --message "Event occurred" --priority info
 syserr
 ```
 
@@ -382,7 +476,7 @@ syserr
 - **Full Documentation:** [README.md](README.md)
 - **Complete Guide:** [SYSTEMD_MONITOR_GUIDE.md](SYSTEMD_MONITOR_GUIDE.md)
 - **Testing Guide:** [TESTING.md](TESTING.md)
-- **Logs Feature:** [LOGS_FEATURE.md](LOGS_FEATURE.md)
+- **Log Viewing:** [LOGS_FEATURE.md](LOGS_FEATURE.md)
 
 ---
 

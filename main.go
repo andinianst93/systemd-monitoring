@@ -32,6 +32,8 @@ func main() {
 		handleMonitor()
 	case "logs":
 		handleLogs()
+	case "write-log":
+		handleWriteLog()
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 		printUsage()
@@ -312,6 +314,7 @@ func printUsage() {
 	fmt.Println("  check <services>  Check specific services")
 	fmt.Println("  monitor           Monitor services continuously")
 	fmt.Println("  logs <service>    View service logs")
+	fmt.Println("  write-log         Write message to systemd journal")
 	fmt.Println("\nList Options:")
 	fmt.Println("  --status string   Filter by status (running/failed/stopped/all)")
 	fmt.Println("  --output string   Output format (table/json)")
@@ -332,6 +335,10 @@ func printUsage() {
 	fmt.Println("  --priority string Filter by priority (info, warning, error, etc)")
 	fmt.Println("  --grep string     Filter logs by pattern")
 	fmt.Println("  --sudo            Use sudo")
+	fmt.Println("\nWrite-Log Options:")
+	fmt.Println("  --message string  Message to write (required)")
+	fmt.Println("  --priority string Priority level (info, warning, err, crit, debug)")
+	fmt.Println("  --identifier string Application identifier (default: systemd-monitor)")
 	fmt.Println("\nExamples:")
 	fmt.Println("  systemd-monitor list")
 	fmt.Println("  systemd-monitor list --status running --output json")
@@ -341,4 +348,44 @@ func printUsage() {
 	fmt.Println("  systemd-monitor logs clash --follow")
 	fmt.Println("  systemd-monitor logs clash --lines 100 --since '1 hour ago'")
 	fmt.Println("  systemd-monitor logs nginx --grep error --priority err")
+	fmt.Println("  systemd-monitor write-log --message 'Service started' --priority info")
+	fmt.Println("  systemd-monitor write-log --message 'Critical error' --priority crit")
+}
+
+func handleWriteLog() {
+	// Parse flags
+	writeCmd := flag.NewFlagSet("write-log", flag.ExitOnError)
+	message := writeCmd.String("message", "", "Message to write to journal (required)")
+	priority := writeCmd.String("priority", "info", "Priority level (info, warning, err, crit, debug)")
+	identifier := writeCmd.String("identifier", "systemd-monitor", "Application identifier")
+
+	writeCmd.Parse(os.Args[2:])
+
+	// Validate message
+	if *message == "" {
+		fmt.Println("Error: --message is required")
+		fmt.Println("\nUsage: systemd-monitor write-log --message <text> [options]")
+		os.Exit(1)
+	}
+
+	// Check if systemd-cat is available
+	if !logger.IsJournalAvailable() {
+		fmt.Println("Error: systemd-cat not found. Make sure systemd is installed.")
+		os.Exit(2)
+	}
+
+	// Create journal logger
+	journalLogger := logger.NewJournalLogger(*identifier)
+
+	// Write to journal
+	err := journalLogger.WriteToJournal(*message, *priority)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing to journal: %v\n", err)
+		os.Exit(2)
+	}
+
+	fmt.Printf("✅ Message written to systemd journal\n")
+	fmt.Printf("   Priority: %s\n", *priority)
+	fmt.Printf("   Identifier: %s\n", *identifier)
+	fmt.Printf("\nView with: journalctl -t %s -n 10\n", *identifier)
 }
