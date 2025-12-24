@@ -227,7 +227,7 @@ func handleLogs() {
 	args := logsCmd.Args()
 	if len(args) == 0 {
 		fmt.Println("Error: No service specified")
-		fmt.Println("\nUsage: systemd-monitor logs <service> [options]")
+		fmt.Println("\nUsage: monitor logs <service> [options]")
 		os.Exit(1)
 	}
 
@@ -308,7 +308,7 @@ func printLogEntry(entry *models.LogEntry) {
 }
 
 func printUsage() {
-	fmt.Println("Usage: systemd-monitor <command> [options]")
+	fmt.Println("Usage: monitor <command> [options]")
 	fmt.Println("\nCommands:")
 	fmt.Println("  list              List all systemd services")
 	fmt.Println("  check <services>  Check specific services")
@@ -338,18 +338,18 @@ func printUsage() {
 	fmt.Println("\nWrite-Log Options:")
 	fmt.Println("  --message string  Message to write (required)")
 	fmt.Println("  --priority string Priority level (info, warning, err, crit, debug)")
-	fmt.Println("  --identifier string Application identifier (default: systemd-monitor)")
+	fmt.Println("  --identifier string Application identifier (default: monitor)")
 	fmt.Println("\nExamples:")
-	fmt.Println("  systemd-monitor list")
-	fmt.Println("  systemd-monitor list --status running --output json")
-	fmt.Println("  systemd-monitor check nginx mysql redis")
-	fmt.Println("  systemd-monitor monitor --services nginx,mysql --interval 1m")
-	fmt.Println("  systemd-monitor logs clash")
-	fmt.Println("  systemd-monitor logs clash --follow")
-	fmt.Println("  systemd-monitor logs clash --lines 100 --since '1 hour ago'")
-	fmt.Println("  systemd-monitor logs nginx --grep error --priority err")
-	fmt.Println("  systemd-monitor write-log --message 'Service started' --priority info")
-	fmt.Println("  systemd-monitor write-log --message 'Critical error' --priority crit")
+	fmt.Println("  monitor list")
+	fmt.Println("  monitor list --status running --output json")
+	fmt.Println("  monitor check nginx mysql redis")
+	fmt.Println("  monitor monitor --services nginx,mysql --interval 1m")
+	fmt.Println("  monitor logs clash")
+	fmt.Println("  monitor logs clash --follow")
+	fmt.Println("  monitor logs clash --lines 100 --since '1 hour ago'")
+	fmt.Println("  monitor logs nginx --grep error --priority err")
+	fmt.Println("  monitor write-log --message 'Service started' --priority info")
+	fmt.Println("  monitor write-log --message 'Critical error' --priority crit")
 }
 
 func handleWriteLog() {
@@ -357,14 +357,14 @@ func handleWriteLog() {
 	writeCmd := flag.NewFlagSet("write-log", flag.ExitOnError)
 	message := writeCmd.String("message", "", "Message to write to journal (required)")
 	priority := writeCmd.String("priority", "info", "Priority level (info, warning, err, crit, debug)")
-	identifier := writeCmd.String("identifier", "systemd-monitor", "Application identifier")
+	identifier := writeCmd.String("identifier", "monitor", "Application identifier")
 
 	writeCmd.Parse(os.Args[2:])
 
 	// Validate message
 	if *message == "" {
 		fmt.Println("Error: --message is required")
-		fmt.Println("\nUsage: systemd-monitor write-log --message <text> [options]")
+		fmt.Println("\nUsage: monitor write-log --message <text> [options]")
 		os.Exit(1)
 	}
 

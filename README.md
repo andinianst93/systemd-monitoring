@@ -125,7 +125,7 @@ monitor --help
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/systemd-monitoring.git
+git clone https://github.com/andinianst93/systemd-monitoring.git
 cd systemd-monitoring
 
 # Run directly with go
